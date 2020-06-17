@@ -4,18 +4,23 @@
 
 enum estados_celda {OCUPADO, VACIO, BORRADO};
 
+// Estructuras auxiliares
+
 typedef struct celda{
     void* valor;
     char* clave;
     enum estados_celda estado;
 } celda_t;
 
+// Estructuras
 
 struct hash{
     hash_destruir_dato_t destruir_dato;
     void** datos;
     size_t tamanio;
 };
+
+// Primitivas
 
 hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
     hash_t* hash = malloc(sizeof(hash_t));
