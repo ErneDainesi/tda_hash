@@ -31,5 +31,6 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
         return NULL;
     }
     hash->tamanio = TAM_INI;
+    hash->destruir_dato = destruir_dato;
     return hash;
 }
