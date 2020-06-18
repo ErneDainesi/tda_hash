@@ -2,6 +2,7 @@
 #include <string.h>
 #include "hash.h"
 #define TAM_INI 7
+#define CANT_INI 0
 
 enum estados_celda {OCUPADO, VACIO, BORRADO};
 
@@ -16,12 +17,13 @@ typedef struct celda{
 // Estructuras
 
 struct hash{
-    hash_destruir_dato_t destruir_dato;
-    celda_t** datos;
+    celda_t* tabla;
     size_t tamanio;
+    size_t cantidad;
+    hash_destruir_dato_t destruir_dato;
 };
 
-// Funcion de Hash
+// Funciones auxiliares
 
 //Nose si meter esto aca, o si al final le mandamos el README con estos links
 //https://medium.com/swlh/hash-tables-in-c-with-the-djb2-algorithm-21f14ba7ca88
@@ -30,45 +32,25 @@ struct hash{
 size_t hash_func(char *str, size_t tam_hash){
     unsigned long hash = 5381;
     int c;
-    while ((c = *str++))
+    while((c = *str++))
         hash = ((hash << 5) + hash) + c;
     return hash % tam_hash;
 }
-
 // Primitivas
 
 hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
     hash_t* hash = malloc(sizeof(hash_t));
     if(!hash) return NULL;
-    hash->datos = malloc(sizeof(void*) * TAM_INI);
-    if(!hash->datos){
+    hash->tabla = malloc(sizeof(celda_t) * TAM_INI);
+    if(!hash->tabla){
         free(hash);
         return NULL;
     }
     hash->tamanio = TAM_INI;
+    hash->cantidad = CANT_INI;
+    for(int i = 0; i < hash->tamanio; i++){
+        hash->tabla[i].estado = VACIO;
+    }
     hash->destruir_dato = destruir_dato;
     return hash;
-}
-
-//Todavia no la termine, tengo agregarle que encuentre una posicion donde guardar
-//en caso de que la pos que devuelva hash este ocupada
-
-bool hash_guardar(hash_t *hash, const char *clave, void *dato){
-    char* copia_clave = strdup(clave);
-    if(!copia_clave) return false;
-    celda_t* celda = malloc(sizeof(celda_t));
-    if(!celda){
-        free(copia_clave);
-        return false;
-    }
-    size_t pos = hash_func(copia_clave, hash->tamanio);
-    if(hash->datos[pos]->estado == OCUPADO){
-        void* dato_anterior = hash->datos[pos]->valor;
-        hash->datos[pos]->valor = dato;
-        hash->destruir_dato(dato_anterior);
-    }
-    celda->clave = copia_clave;
-    celda->valor = dato;
-    celda->estado = OCUPADO;
-    return true;
 }
