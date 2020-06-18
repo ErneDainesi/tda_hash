@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "hash.h"
 #define TAM_INI 7
 #define CANT_INI 0
