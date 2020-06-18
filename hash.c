@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -54,4 +55,34 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
     }
     hash->destruir_dato = destruir_dato;
     return hash;
+}
+
+void *hash_borrar(hash_t *hash, const char *clave){
+    char* copia_clave = strdup(clave);
+    if (!copia_clave) return NULL;
+    size_t pos = hash_func(copia_clave, hash->tamanio);
+    if (hash->tabla[pos].estado == OCUPADO){
+        void* dato = hash->tabla[pos].valor;
+        free(hash->tabla[pos].clave);
+        free(copia_clave);
+        hash->tabla[pos].estado = BORRADO;
+        return dato;
+    }
+    return NULL;
+}
+
+void *hash_obtener(const hash_t *hash, const char *clave){
+    char* copia_clave = strdup(clave);
+    if (!copia_clave) return NULL;
+    size_t pos = hash_func(copia_clave, hash->tamanio);
+    if (hash->tabla[pos].estado == OCUPADO){
+        void* dato = hash->tabla[pos].valor;
+        return dato;
+    }
+    free(copia_clave);
+    return NULL;
+}
+
+size_t hash_cantidad(const hash_t *hash){
+    return hash->cantidad;
 }
