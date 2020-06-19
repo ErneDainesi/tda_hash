@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -5,20 +6,20 @@
 #define TAM_INI 7
 #define CANT_INI 0
 
-enum estados_celda {OCUPADO, VACIO, BORRADO};
+typedef enum estados_celda {VACIO, OCUPADO, BORRADO} estado_celda_t;
 
 // Estructuras auxiliares
 
 typedef struct celda{
     void* valor;
     char* clave;
-    enum estados_celda estado;
+    estado_celda_t estado;
 } celda_t;
 
 // Estructuras
 
 struct hash{
-    celda_t* tabla;
+    celda_t* tabla; // lo volvi a cambiar pq necesitamos un arreglo de struct, no uno de punter a struct.
     size_t tamanio;
     size_t cantidad;
     hash_destruir_dato_t destruir_dato;
@@ -37,21 +38,20 @@ size_t hash_func(char *str, size_t tam_hash){
         hash = ((hash << 5) + hash) + c;
     return hash % tam_hash;
 }
+
 // Primitivas
 
 hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
     hash_t* hash = malloc(sizeof(hash_t));
     if(!hash) return NULL;
-    hash->tabla = malloc(sizeof(celda_t) * TAM_INI);
+    hash->tabla = calloc(1, sizeof(celda_t) * TAM_INI);
     if(!hash->tabla){
         free(hash);
         return NULL;
     }
     hash->tamanio = TAM_INI;
     hash->cantidad = CANT_INI;
-    for(int i = 0; i < hash->tamanio; i++){
-        hash->tabla[i].estado = VACIO;
-    }
-    hash->destruir_dato = destruir_dato;
+    if(destruir_dato)
+        hash->destruir_dato = destruir_dato;
     return hash;
 }
