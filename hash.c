@@ -31,12 +31,12 @@ struct hash{
 //https://medium.com/swlh/hash-tables-in-c-with-the-djb2-algorithm-21f14ba7ca88
 //https://gist.github.com/MohamedTaha98/ccdf734f13299efb73ff0b12f7ce429f
 
-size_t hash_func(char *str, size_t tam_hash){
+size_t hash_func(char *str){
     unsigned long hash = 5381;
     int c;
     while((c = *str++))
         hash = ((hash << 5) + hash) + c;
-    return hash % tam_hash;
+    return hash;
 }
 
 // Primitivas
@@ -54,4 +54,53 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
     if(destruir_dato)
         hash->destruir_dato = destruir_dato;
     return hash;
+}
+
+void *hash_borrar(hash_t *hash, const char *clave){
+    char* copia_clave = strdup(clave);
+    if (!copia_clave) return NULL;
+    size_t pos = hash_func(copia_clave) % hash->tamanio;
+    size_t i = pos;
+    while (hash->tabla[i].estado != VACIO){
+        if (hash->tabla[i].estado == OCUPADO  &&  hash->tabla[i].clave == clave){
+            void* dato = hash->tabla[i].valor;
+            free(hash->tabla[i].clave);
+            free(copia_clave);
+            hash->tabla[i].estado = BORRADO;
+            hash->cantidad--;
+            return dato;
+
+        }
+        i = (i + 1) % hash->tamanio;
+        if (i == pos){
+            break;
+        }
+    }
+    free(copia_clave);
+    return NULL;
+}
+
+void *hash_obtener(const hash_t *hash, const char *clave){
+    char* copia_clave = strdup(clave);
+    if (!copia_clave) return NULL;
+    size_t pos = hash_func(copia_clave) % hash->tamanio;
+    size_t i = pos; 
+    while (hash->tabla[i].estado != VACIO){
+        if (hash->tabla[i].estado == OCUPADO  &&  hash->tabla[i].clave == clave){
+            void* dato = hash->tabla[i].valor;
+            free(copia_clave);
+            return dato;
+
+        }
+        i = (i + 1) % hash->tamanio;
+        if (i == pos){
+            break;
+        }
+    }
+    free(copia_clave);
+    return NULL;
+}
+
+size_t hash_cantidad(const hash_t *hash){
+    return hash->cantidad;
 }
