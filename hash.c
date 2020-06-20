@@ -46,7 +46,14 @@ bool validar_redimension(hash_t* hash){
 }
 
 hash_t* hash_redimension(hash_t* hash){
-    hash_t* hash_nuevo = hash_crear(hash->destruir_dato);
+    hash_destruir_dato_t destruir_dato;
+    if(!hash->destruir_dato){
+        destruir_dato = NULL;
+    }else{
+        destruir_dato = hash->destruir_dato;
+    }
+    hash_t* hash_nuevo = hash_crear(destruir_dato);
+    if(!hash_nuevo) return NULL;
     hash_nuevo->tamanio = (hash->tamanio) * 2;
     for(int i = 0; i < hash->tamanio; i++){
         if(hash->tabla[i].estado == OCUPADO){
@@ -88,12 +95,13 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
         }
         i = (i + 1) % hash->tamanio;
         if (i == pos){
-            //acá habría que redimensionar
+            //hash = hash_redimension(hash);
         }
     }
     hash->tabla[i].clave = copia_clave;
     hash->tabla[i].valor = dato;
     hash->tabla[i].estado = OCUPADO;
+    hash->cantidad++;
     return true;
 }
 
@@ -108,7 +116,6 @@ void *hash_borrar(hash_t *hash, const char *clave){
             free(hash->tabla[i].clave);
             free(copia_clave);
             hash->tabla[i].estado = BORRADO;
-            // hash->cantidad--;
             return dato;
 
         }
@@ -166,7 +173,7 @@ size_t hash_cantidad(const hash_t *hash){
 
 void hash_destruir(hash_t *hash){
     for(int i = 0; i < hash->tamanio; i++){
-        if(hash->tabla[i].estado == OCUPADO){
+        if(hash->tabla[i].estado == OCUPADO && hash->destruir_dato){
             hash->destruir_dato(hash->tabla[i].valor);
             free(hash->tabla[i].clave);
         }
