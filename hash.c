@@ -41,7 +41,7 @@ size_t hash_func(char *str){
 
 bool validar_redimension(hash_t* hash){
     size_t factor_de_carga = hash_cantidad(hash) / hash->tamanio;
-    if(factor_de_carga < 0,7) return true;
+    if(factor_de_carga < 0.7) return true;
     return false;
 }
 
@@ -141,6 +141,25 @@ void *hash_obtener(const hash_t *hash, const char *clave){
     return NULL;
 }
 
+bool hash_pertenece(const hash_t *hash, const char *clave){
+    char* copia_clave = strdup(clave);
+    if (!copia_clave) return NULL;
+    size_t pos = hash_func(copia_clave) % hash->tamanio;
+    size_t i = pos;
+    while (hash->tabla[i].estado == OCUPADO){
+        if (strcmp(hash->tabla[i].clave, clave) == 0){
+            free(copia_clave);
+            return true;
+        }
+        i = (i+1) % hash->tamanio;
+        if (i == pos){
+            break;
+        }
+    }
+    free(copia_clave);
+    return false;
+}
+
 size_t hash_cantidad(const hash_t *hash){
     return hash->cantidad;
 }
@@ -154,4 +173,23 @@ void hash_destruir(hash_t *hash){
     }
     free(hash->tabla);
     free(hash);
+}
+
+hash_iter_t *hash_iter_crear(const hash_t *hash){
+    return NULL;
+}
+
+bool hash_iter_avanzar(hash_iter_t *iter){
+    return true;
+}
+
+const char *hash_iter_ver_actual(const hash_iter_t *iter){
+    return NULL;
+}
+
+bool hash_iter_al_final(const hash_iter_t *iter){
+    return true;
+}
+
+void hash_iter_destruir(hash_iter_t* iter){
 }
