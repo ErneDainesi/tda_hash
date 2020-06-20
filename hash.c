@@ -39,6 +39,26 @@ size_t hash_func(char *str){
     return hash;
 }
 
+bool validar_redimension(hash_t* hash){
+    size_t factor_de_carga = hash_cantidad(hash) / hash->tamanio;
+    if(factor_de_carga < 0,7) return true;
+    return false;
+}
+
+hash_t* hash_redimension(hash_t* hash){
+    hash_t* hash_nuevo = hash_crear(hash->destruir_dato);
+    hash_nuevo->tamanio = (hash->tamanio) * 2;
+    for(int i = 0; i < hash->tamanio; i++){
+        if(hash->tabla[i].estado == OCUPADO){
+            char* clave_tabla_vieja = hash->tabla[i].clave;
+            void* dato_tabla_vieja = hash_obtener(hash, clave_tabla_vieja);
+            hash_guardar(hash_nuevo, clave_tabla_vieja, dato_tabla_vieja);
+        }
+    }
+    hash_destruir(hash);
+    return hash_nuevo;
+}
+
 // Primitivas
 
 hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
@@ -56,18 +76,39 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
     return hash;
 }
 
+bool hash_guardar(hash_t *hash, const char *clave, void *dato){
+    char* copia_clave = strdup(clave);
+    if (!copia_clave) return false;
+    size_t pos = hash_func(copia_clave) % hash->tamanio;
+    size_t i = pos;
+    while (hash->tabla[i].estado == OCUPADO){
+        if (hash->tabla[i].clave == copia_clave){
+            hash->tabla[i].valor = dato;
+            return true;
+        }
+        i = (i + 1) % hash->tamanio;
+        if (i == pos){
+            //acá habría que redimensionar
+        }
+    }
+    hash->tabla[i].clave = copia_clave;
+    hash->tabla[i].valor = dato;
+    hash->tabla[i].estado = OCUPADO;
+    return true;
+}
+
 void *hash_borrar(hash_t *hash, const char *clave){
     char* copia_clave = strdup(clave);
     if (!copia_clave) return NULL;
     size_t pos = hash_func(copia_clave) % hash->tamanio;
     size_t i = pos;
     while (hash->tabla[i].estado != VACIO){
-        if (hash->tabla[i].estado == OCUPADO  &&  hash->tabla[i].clave == clave){
+        if (hash->tabla[i].estado == OCUPADO  &&  strcmp(hash->tabla[i].clave, clave) == 0){
             void* dato = hash->tabla[i].valor;
             free(hash->tabla[i].clave);
             free(copia_clave);
             hash->tabla[i].estado = BORRADO;
-            hash->cantidad--;
+            // hash->cantidad--;
             return dato;
 
         }
@@ -86,11 +127,10 @@ void *hash_obtener(const hash_t *hash, const char *clave){
     size_t pos = hash_func(copia_clave) % hash->tamanio;
     size_t i = pos; 
     while (hash->tabla[i].estado != VACIO){
-        if (hash->tabla[i].estado == OCUPADO  &&  hash->tabla[i].clave == clave){
+        if (hash->tabla[i].estado == OCUPADO  &&  strcmp(hash->tabla[i].clave, clave) == 0){
             void* dato = hash->tabla[i].valor;
             free(copia_clave);
             return dato;
-
         }
         i = (i + 1) % hash->tamanio;
         if (i == pos){
@@ -103,4 +143,15 @@ void *hash_obtener(const hash_t *hash, const char *clave){
 
 size_t hash_cantidad(const hash_t *hash){
     return hash->cantidad;
+}
+
+void hash_destruir(hash_t *hash){
+    for(int i = 0; i < hash->tamanio; i++){
+        if(hash->tabla[i].estado == OCUPADO){
+            hash->destruir_dato(hash->tabla[i].valor);
+            free(hash->tabla[i].clave);
+        }
+    }
+    free(hash->tabla);
+    free(hash);
 }
