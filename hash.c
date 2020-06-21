@@ -25,6 +25,12 @@ struct hash{
     hash_destruir_dato_t destruir_dato;
 };
 
+struct hash_iter{
+	celda_t* actual;
+	celda_t* anterior;
+    hash_t* hash;
+};
+
 // Funciones auxiliares
 
 //Nose si meter esto aca, o si al final le mandamos el README con estos links
@@ -195,20 +201,35 @@ void hash_destruir(hash_t *hash){
 }
 
 hash_iter_t *hash_iter_crear(const hash_t *hash){
-    return NULL;
+    hash_iter_t* iter = malloc(sizeof(hash_iter_t));
+    if (!iter) return NULL;
+    iter->hash = hash;
+    iter->actual = &hash->tabla[0];
+    iter->anterior = NULL;
+    return iter;
 }
 
 bool hash_iter_avanzar(hash_iter_t *iter){
-    return true;
+    if (hash_iter_al_final(iter)) return false;
+    char* copia_clave = strdup(iter->actual->clave);
+    if (!copia_clave) return NULL;
+    size_t pos = hash_func(copia_clave) % iter->hash->tamanio;
+    size_t sig_pos = (pos + 1) % iter->hash->tamanio;
+
+    celda_t* viejo_actual = iter->actual;
+    iter->anterior = viejo_actual;
+    iter->actual = &iter->hash->tabla[sig_pos];
+	return true;
 }
 
 const char *hash_iter_ver_actual(const hash_iter_t *iter){
-    return NULL;
+    return iter->actual->clave;
 }
 
 bool hash_iter_al_final(const hash_iter_t *iter){
-    return true;
+    return !iter->actual;
 }
 
 void hash_iter_destruir(hash_iter_t* iter){
+    free(iter);
 }
