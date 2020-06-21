@@ -28,7 +28,7 @@ struct hash{
 struct hash_iter{
 	celda_t* actual;
 	celda_t* anterior;
-    hash_t* hash;
+    const hash_t* hash;
 };
 
 // Funciones auxiliares
@@ -47,43 +47,48 @@ size_t hash_func(char *str){
 
 bool validar_redimension(hash_t* hash){
     size_t factor_de_carga = hash_cantidad(hash) / hash->tamanio;
-    if(factor_de_carga < 0.7) return true;
+    if(factor_de_carga > 0.7) return true;
     return false;
 }
 
-celda_t* celda_crear(size_t tamanio_de_tabla, hash_t* hash){
+celda_t* celda_crear(size_t tamanio_de_tabla){
     celda_t* celdas = calloc(1, sizeof(celda_t) * tamanio_de_tabla);
     if(!celdas) return NULL;
     return celdas;
 }
 
-hash_t* hash_redimension(hash_t* hash){
-    hash_t* hash_nuevo = hash_crear(hash->destruir_dato);
-    if(!hash_nuevo) return NULL;
-    free(hash_nuevo->tabla);
-    hash_nuevo->tabla = celda_crear((hash->tamanio)*2, hash);   
-    if(!hash_nuevo->tabla){
-        free(hash_nuevo);
-        return NULL;
+bool hash_redimension(hash_t* hash){
+    //creo una nueva tabla del doble del tamanio
+    celda_t* nueva_tabla = celda_crear((hash->tamanio)*2);   
+    if(!nueva_tabla){
+        return false;
     }
-    hash_nuevo->tamanio = (hash->tamanio) * 2;
+    //me guardo la tabla vieja 
+    celda_t* tabla_vieja = hash->tabla;
+    hash->tabla = nueva_tabla;
+    hash->tamanio = (hash->tamanio) * 2;
+    //recorro todo el hash viejo y si las celdas estan ocupadas las guardo
+    //en la nueva tabla
     for(int i = 0; i < hash->tamanio; i++){
-        if(hash->tabla[i].estado == OCUPADO){
-            char* clave_tabla_vieja = hash->tabla[i].clave;
-            void* dato_tabla_vieja = hash_obtener(hash, clave_tabla_vieja);
-            hash_guardar(hash_nuevo, clave_tabla_vieja, dato_tabla_vieja);
+        if(tabla_vieja[i].estado == OCUPADO){
+            char* clave_tabla_vieja = tabla_vieja[i].clave;
+            hash->tabla[i].clave = clave_tabla_vieja;
+            hash->tabla[i].valor = tabla_vieja[i].valor;
+            hash->tabla[i].estado = OCUPADO;
+            free(clave_tabla_vieja);
         }
     }
-    hash_destruir(hash);
-    return hash_nuevo;
+    free(tabla_vieja);
+    return true;
 }
+
 
 // Primitivas
 
 hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
     hash_t* hash = malloc(sizeof(hash_t));
     if(!hash) return NULL;
-    hash->tabla = celda_crear(TAM_INI, hash);
+    hash->tabla = celda_crear(TAM_INI);
     if(!hash->tabla){
         free(hash);
         return NULL;
@@ -110,8 +115,11 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
         }
         i = (i + 1) % hash->tamanio;
         if (i == pos){
-            hash = hash_redimension(hash);
+            break;
         }
+    }
+    if (validar_redimension(hash)){
+        hash_redimension(hash);
     }
     hash->tabla[i].clave = copia_clave;
     hash->tabla[i].valor = dato;
@@ -204,25 +212,39 @@ hash_iter_t *hash_iter_crear(const hash_t *hash){
     hash_iter_t* iter = malloc(sizeof(hash_iter_t));
     if (!iter) return NULL;
     iter->hash = hash;
-    iter->actual = &hash->tabla[0];
     iter->anterior = NULL;
+    if (iter->hash->cantidad == 0){
+        iter->actual = NULL;
+        return iter;
+    }
+    size_t i = 0;
+    while (iter->hash->tabla[i].estado != OCUPADO){
+        i = (i+1) % iter->hash->tamanio;
+    }
+    iter->actual = &iter->hash->tabla[i];
     return iter;
 }
 
 bool hash_iter_avanzar(hash_iter_t *iter){
     if (hash_iter_al_final(iter)) return false;
+    if (iter->hash->cantidad == 0) return false;
+    celda_t* viejo_actual = iter->actual;
+    iter->anterior = viejo_actual;
     char* copia_clave = strdup(iter->actual->clave);
     if (!copia_clave) return NULL;
     size_t pos = hash_func(copia_clave) % iter->hash->tamanio;
-    size_t sig_pos = (pos + 1) % iter->hash->tamanio;
-
-    celda_t* viejo_actual = iter->actual;
-    iter->anterior = viejo_actual;
-    iter->actual = &iter->hash->tabla[sig_pos];
+    size_t i = pos + 1;
+    while (iter->hash->tabla[i].estado != OCUPADO){
+        i = (i+1) % iter->hash->tamanio;
+    }
+    iter->actual = &iter->hash->tabla[i];
 	return true;
 }
 
 const char *hash_iter_ver_actual(const hash_iter_t *iter){
+    if (iter->hash->cantidad == 0){
+        return NULL;
+    }
     return iter->actual->clave;
 }
 
