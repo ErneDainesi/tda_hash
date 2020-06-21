@@ -21,7 +21,8 @@ typedef struct celda{
 struct hash{
     celda_t* tabla;
     size_t tamanio;
-    size_t cantidad;
+    size_t cantidad_ocupados;
+    size_t cantidad_borrados;
     hash_destruir_dato_t destruir_dato;
 };
 
@@ -46,7 +47,7 @@ size_t hash_func(char *str){
 }
 
 bool validar_redimension(hash_t* hash){
-    size_t factor_de_carga = hash_cantidad(hash) / hash->tamanio;
+    size_t factor_de_carga = (hash_cantidad(hash) + hash->cantidad_borrados) / hash->tamanio;
     if(factor_de_carga > 0.7) return true;
     return false;
 }
@@ -65,13 +66,16 @@ bool hash_redimension(hash_t* hash){
     }
     //me guardo la tabla vieja 
     celda_t* tabla_vieja = hash->tabla;
+    size_t tamanio_viejo = hash->tamanio;
     hash->tabla = nueva_tabla;
-    hash->tamanio = (hash->tamanio) * 2;
+    hash->tamanio = tamanio_viejo * 2;
+    hash->cantidad_ocupados = CANT_INI;
+    hash->cantidad_borrados = CANT_INI;
     //recorro todo el hash viejo y si las celdas estan ocupadas las guardo
     //en la nueva tabla
-    for(int i = 0; i < hash->tamanio; i++){
+    for(int i = 0; i < tamanio_viejo; i++){
         if(tabla_vieja[i].estado == OCUPADO){
-            hash_guardar(hash, tabla_vieja[i].clave, hash_obtener(hash, tabla_vieja[i].clave));
+            hash_guardar(hash, tabla_vieja[i].clave, tabla_vieja[i].valor);
             free(tabla_vieja[i].clave);
         }
     }
@@ -91,7 +95,8 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
         return NULL;
     }
     hash->tamanio = TAM_INI;
-    hash->cantidad = CANT_INI;
+    hash->cantidad_ocupados = CANT_INI;
+    hash->cantidad_borrados = CANT_INI;
     hash->destruir_dato = destruir_dato;
     return hash;
 }
@@ -99,6 +104,9 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
     char* copia_clave = strdup(clave);
     if (!copia_clave) return false;
+    if (validar_redimension(hash)){
+        hash_redimension(hash);
+    }
     size_t pos = hash_func(copia_clave) % hash->tamanio;
     size_t i = pos;
     while (hash->tabla[i].estado == OCUPADO){
@@ -115,13 +123,10 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
             break;
         }
     }
-    if (validar_redimension(hash)){
-        hash_redimension(hash);
-    }
     hash->tabla[i].clave = copia_clave;
     hash->tabla[i].valor = dato;
     hash->tabla[i].estado = OCUPADO;
-    hash->cantidad++;
+    hash->cantidad_ocupados++;
     return true;
 }
 
@@ -131,14 +136,14 @@ void *hash_borrar(hash_t *hash, const char *clave){
     size_t pos = hash_func(copia_clave) % hash->tamanio;
     size_t i = pos;
     while (hash->tabla[i].estado != VACIO){
-        if (hash->tabla[i].estado == OCUPADO  &&  strcmp(hash->tabla[i].clave, clave) == 0){
+        if (hash->tabla[i].estado == OCUPADO  &&  strcmp(hash->tabla[i].clave, copia_clave) == 0){
             void* dato = hash->tabla[i].valor;
             free(hash->tabla[i].clave);
             free(copia_clave);
             hash->tabla[i].estado = BORRADO;
-            hash->cantidad--;
+            hash->cantidad_ocupados--;
+            hash->cantidad_borrados++;
             return dato;
-
         }
         i = (i + 1) % hash->tamanio;
         if (i == pos){
@@ -155,7 +160,7 @@ void *hash_obtener(const hash_t *hash, const char *clave){
     size_t pos = hash_func(copia_clave) % hash->tamanio;
     size_t i = pos; 
     while (hash->tabla[i].estado != VACIO){
-        if (hash->tabla[i].estado == OCUPADO  &&  strcmp(hash->tabla[i].clave, clave) == 0){
+        if (hash->tabla[i].estado == OCUPADO  &&  strcmp(hash->tabla[i].clave, copia_clave) == 0){
             void* dato = hash->tabla[i].valor;
             free(copia_clave);
             return dato;
@@ -175,7 +180,7 @@ bool hash_pertenece(const hash_t *hash, const char *clave){
     size_t pos = hash_func(copia_clave) % hash->tamanio;
     size_t i = pos;
     while (hash->tabla[i].estado == OCUPADO){
-        if (strcmp(hash->tabla[i].clave, clave) == 0){
+        if (strcmp(hash->tabla[i].clave, copia_clave) == 0){
             free(copia_clave);
             return true;
         }
@@ -189,7 +194,7 @@ bool hash_pertenece(const hash_t *hash, const char *clave){
 }
 
 size_t hash_cantidad(const hash_t *hash){
-    return hash->cantidad;
+    return hash->cantidad_ocupados;
 }
 
 void hash_destruir(hash_t *hash){
@@ -210,7 +215,7 @@ hash_iter_t *hash_iter_crear(const hash_t *hash){
     if (!iter) return NULL;
     iter->hash = hash;
     iter->anterior = NULL;
-    if (iter->hash->cantidad == 0){
+    if (iter->hash->cantidad_ocupados == 0){
         iter->actual = NULL;
         return iter;
     }
@@ -224,7 +229,7 @@ hash_iter_t *hash_iter_crear(const hash_t *hash){
 
 bool hash_iter_avanzar(hash_iter_t *iter){
     if (hash_iter_al_final(iter)) return false;
-    if (iter->hash->cantidad == 0) return false;
+    if (iter->hash->cantidad_ocupados == 0) return false;
     celda_t* viejo_actual = iter->actual;
     iter->anterior = viejo_actual;
     char* copia_clave = strdup(iter->actual->clave);
@@ -239,7 +244,7 @@ bool hash_iter_avanzar(hash_iter_t *iter){
 }
 
 const char *hash_iter_ver_actual(const hash_iter_t *iter){
-    if (iter->hash->cantidad == 0){
+    if (iter->hash->cantidad_ocupados == 0){
         return NULL;
     }
     return iter->actual->clave;
