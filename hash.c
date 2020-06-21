@@ -19,7 +19,7 @@ typedef struct celda{
 // Estructuras
 
 struct hash{
-    celda_t* tabla; // lo volvi a cambiar pq necesitamos un arreglo de struct, no uno de punter a struct.
+    celda_t* tabla;
     size_t tamanio;
     size_t cantidad;
     hash_destruir_dato_t destruir_dato;
@@ -45,15 +45,21 @@ bool validar_redimension(hash_t* hash){
     return false;
 }
 
+celda_t* celda_crear(size_t tamanio_de_tabla, hash_t* hash){
+    celda_t* celdas = calloc(1, sizeof(celda_t) * tamanio_de_tabla);
+    if(!celdas) return NULL;
+    return celdas;
+}
+
 hash_t* hash_redimension(hash_t* hash){
-    hash_destruir_dato_t destruir_dato;
-    if(!hash->destruir_dato){
-        destruir_dato = NULL;
-    }else{
-        destruir_dato = hash->destruir_dato;
-    }
-    hash_t* hash_nuevo = hash_crear(destruir_dato);
+    hash_t* hash_nuevo = hash_crear(hash->destruir_dato);
     if(!hash_nuevo) return NULL;
+    free(hash_nuevo->tabla);
+    hash_nuevo->tabla = celda_crear((hash->tamanio)*2, hash);   
+    if(!hash_nuevo->tabla){
+        free(hash_nuevo);
+        return NULL;
+    }
     hash_nuevo->tamanio = (hash->tamanio) * 2;
     for(int i = 0; i < hash->tamanio; i++){
         if(hash->tabla[i].estado == OCUPADO){
@@ -71,15 +77,14 @@ hash_t* hash_redimension(hash_t* hash){
 hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
     hash_t* hash = malloc(sizeof(hash_t));
     if(!hash) return NULL;
-    hash->tabla = calloc(1, sizeof(celda_t) * TAM_INI);
+    hash->tabla = celda_crear(TAM_INI, hash);
     if(!hash->tabla){
         free(hash);
         return NULL;
     }
     hash->tamanio = TAM_INI;
     hash->cantidad = CANT_INI;
-    if(destruir_dato)
-        hash->destruir_dato = destruir_dato;
+    hash->destruir_dato = destruir_dato;
     return hash;
 }
 
@@ -89,13 +94,17 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
     size_t pos = hash_func(copia_clave) % hash->tamanio;
     size_t i = pos;
     while (hash->tabla[i].estado == OCUPADO){
-        if (hash->tabla[i].clave == copia_clave){
+        if (strcmp(hash->tabla[i].clave, copia_clave) == 0){
+            void* dato_anterior = hash->tabla[i].valor;
             hash->tabla[i].valor = dato;
+            if(hash->destruir_dato){
+                hash->destruir_dato(dato_anterior);
+            }
             return true;
         }
         i = (i + 1) % hash->tamanio;
         if (i == pos){
-            //hash = hash_redimension(hash);
+            hash = hash_redimension(hash);
         }
     }
     hash->tabla[i].clave = copia_clave;
@@ -116,6 +125,7 @@ void *hash_borrar(hash_t *hash, const char *clave){
             free(hash->tabla[i].clave);
             free(copia_clave);
             hash->tabla[i].estado = BORRADO;
+            hash->cantidad--;
             return dato;
 
         }
@@ -175,6 +185,8 @@ void hash_destruir(hash_t *hash){
     for(int i = 0; i < hash->tamanio; i++){
         if(hash->tabla[i].estado == OCUPADO && hash->destruir_dato){
             hash->destruir_dato(hash->tabla[i].valor);
+            free(hash->tabla[i].clave);
+        }else if(hash->tabla[i].estado == OCUPADO && !hash->destruir_dato){
             free(hash->tabla[i].clave);
         }
     }
