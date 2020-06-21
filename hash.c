@@ -71,11 +71,8 @@ bool hash_redimension(hash_t* hash){
     //en la nueva tabla
     for(int i = 0; i < hash->tamanio; i++){
         if(tabla_vieja[i].estado == OCUPADO){
-            char* clave_tabla_vieja = tabla_vieja[i].clave;
-            hash->tabla[i].clave = clave_tabla_vieja;
-            hash->tabla[i].valor = tabla_vieja[i].valor;
-            hash->tabla[i].estado = OCUPADO;
-            free(clave_tabla_vieja);
+            hash_guardar(hash, tabla_vieja[i].clave, hash_obtener(hash, tabla_vieja[i].clave));
+            free(tabla_vieja[i].clave);
         }
     }
     free(tabla_vieja);
@@ -234,7 +231,7 @@ bool hash_iter_avanzar(hash_iter_t *iter){
     if (!copia_clave) return NULL;
     size_t pos = hash_func(copia_clave) % iter->hash->tamanio;
     size_t i = pos + 1;
-    while (iter->hash->tabla[i].estado != OCUPADO){
+    while (!&iter->hash->tabla[i] || iter->hash->tabla[i].estado != OCUPADO){
         i = (i+1) % iter->hash->tamanio;
     }
     iter->actual = &iter->hash->tabla[i];
