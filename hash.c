@@ -115,6 +115,7 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
             if(hash->destruir_dato){
                 hash->destruir_dato(dato_anterior);
             }
+            free(copia_clave);
             return true;
         }
         i = (i + 1) % hash->tamanio;
@@ -227,20 +228,19 @@ hash_iter_t *hash_iter_crear(const hash_t *hash){
 
 bool hash_iter_avanzar(hash_iter_t *iter){
     if (hash_iter_al_final(iter)) return false;
-    char* copia_clave = strdup(iter->hash->tabla[iter->actual].clave);
-    if (!copia_clave) return false;
-    size_t pos = hash_func(copia_clave) % iter->hash->tamanio;
-    size_t i = pos + 1;
-    while (iter->hash->tabla[i].estado != OCUPADO){
-        i = (i+1) % iter->hash->tamanio;
+    size_t pos = iter->actual;
+    for(size_t i = pos+1; i < iter->hash->tamanio; i++){
+        if(iter->hash->tabla[i].estado == OCUPADO){
+            iter->actual = i;
+            return true;
+        }
     }
-    iter->actual = i;
-    free(copia_clave);
-	return true;
+    iter->actual = iter->hash->tamanio;
+	return false;
 }
 
 const char *hash_iter_ver_actual(const hash_iter_t *iter){
-    if(hash_iter_al_final(iter)) return NULL;
+    if (hash_iter_al_final(iter)) return NULL;
     return iter->hash->tabla[iter->actual].clave;
 }
 
