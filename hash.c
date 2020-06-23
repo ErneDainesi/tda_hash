@@ -57,21 +57,27 @@ bool necesita_redimension(hash_t* hash){
     return false;
 }
 
+bool necesita_achicar(hash_t* hash){
+    size_t factor_de_carga = (hash_cantidad(hash) + hash->cantidad_borrados) / hash->tamanio;
+    if(factor_de_carga < 0.3) return true;
+    return false;
+}
+
 celda_t* celda_crear(size_t tamanio_de_tabla){
     celda_t* celdas = calloc(1, sizeof(celda_t) * tamanio_de_tabla);
     if(!celdas) return NULL;
     return celdas;
 }
 
-bool hash_redimension(hash_t* hash){
-    celda_t* nueva_tabla = celda_crear((hash->tamanio)*2);   
+bool hash_redimension(hash_t* hash, size_t nuevo_tamanio){
+    celda_t* nueva_tabla = celda_crear(nuevo_tamanio);   
     if(!nueva_tabla){
         return false;
     }
     celda_t* tabla_vieja = hash->tabla;
     size_t tamanio_viejo = hash->tamanio;
     hash->tabla = nueva_tabla;
-    hash->tamanio = tamanio_viejo * 2;
+    hash->tamanio = nuevo_tamanio;
     hash->cantidad_ocupados = CANT_INI;
     hash->cantidad_borrados = CANT_INI;
     for(int i = 0; i < tamanio_viejo; i++){
@@ -127,7 +133,7 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
     char* copia_clave = strdup(clave);
     if (!copia_clave) return false;
     if (necesita_redimension(hash)){
-        hash_redimension(hash);
+        hash_redimension(hash, ((hash->tamanio)*2));
     }
     size_t pos = hash_func(copia_clave, strlen(copia_clave)) % hash->tamanio;
     size_t i = pos;
@@ -175,6 +181,9 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 }
 
 void *hash_borrar(hash_t *hash, const char *clave){
+    if (necesita_achicar(hash)){
+        hash_redimension(hash, ((hash->tamanio)/2));
+    }
     size_t pos = buscar_pos(hash, clave);
     if(pos == POS_INVALIDA) return NULL;
     free(hash->tabla[pos].clave);
