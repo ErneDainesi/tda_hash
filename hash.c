@@ -149,12 +149,12 @@ void *hash_borrar(hash_t *hash, const char *clave){
     char* copia_clave = strdup(clave);
     bool clave_pertenece = true;
     size_t pos = buscar_pos(hash, copia_clave, &clave_pertenece);
+    free(copia_clave);
     if(!clave_pertenece) return NULL;
     free(hash->tabla[pos].clave);
     hash->tabla[pos].estado = BORRADO;
     hash->cantidad_ocupados--;
     hash->cantidad_borrados++;
-    free(copia_clave);
     return hash->tabla[pos].valor;
 }
 
@@ -162,8 +162,8 @@ void *hash_obtener(const hash_t *hash, const char *clave){
     char* copia_clave = strdup(clave);
     bool clave_pertenece = true;
     size_t pos = buscar_pos(hash, copia_clave, &clave_pertenece);
-    if(!clave_pertenece) return NULL;
     free(copia_clave);
+    if(!clave_pertenece) return NULL;
     return hash->tabla[pos].valor;
 }
 
