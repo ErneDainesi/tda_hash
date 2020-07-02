@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include "hash.h"
 #define TAM_INI 17
-#define CANT_INI 0
 #define POS_INVALIDA -1
+#define FACTOR_DE_CARGA 0.7
 
 typedef enum estados_celda {VACIO, OCUPADO, BORRADO} estado_celda_t;
 
@@ -53,7 +53,7 @@ size_t linear_probing(const hash_t *hash, size_t i){
 
 bool necesita_redimension(hash_t* hash){
     size_t factor_de_carga = (hash_cantidad(hash) + hash->cantidad_borrados) / hash->tamanio;
-    if(factor_de_carga > 0.7) return true;
+    if(factor_de_carga > FACTOR_DE_CARGA) return true;
     return false;
 }
 
@@ -72,8 +72,8 @@ bool hash_redimension(hash_t* hash, size_t nuevo_tamanio){
     size_t tamanio_viejo = hash->tamanio;
     hash->tabla = nueva_tabla;
     hash->tamanio = nuevo_tamanio;
-    hash->cantidad_ocupados = CANT_INI;
-    hash->cantidad_borrados = CANT_INI;
+    hash->cantidad_ocupados = 0;
+    hash->cantidad_borrados = 0;
     for(int i = 0; i < tamanio_viejo; i++){
         if(tabla_vieja[i].estado == OCUPADO){
             hash_guardar(hash, tabla_vieja[i].clave, tabla_vieja[i].valor);
@@ -117,8 +117,8 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
         return NULL;
     }
     hash->tamanio = TAM_INI;
-    hash->cantidad_ocupados = CANT_INI;
-    hash->cantidad_borrados = CANT_INI;
+    hash->cantidad_ocupados = 0;
+    hash->cantidad_borrados = 0;
     hash->destruir_dato = destruir_dato;
     return hash;
 }
@@ -143,7 +143,7 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
         }
         i = linear_probing(hash, i);
         if (i == pos){
-            break;
+            return false;
         }
     }
     hash->tabla[i].clave = copia_clave;
@@ -180,11 +180,10 @@ size_t hash_cantidad(const hash_t *hash){
 
 void hash_destruir(hash_t *hash){
     for(int i = 0; i < hash->tamanio; i++){
-        if(hash->tabla[i].estado == OCUPADO && hash->destruir_dato){
-            hash->destruir_dato(hash->tabla[i].valor);
+        if(hash->tabla[i].estado == OCUPADO){
             free(hash->tabla[i].clave);
-        }else if(hash->tabla[i].estado == OCUPADO && !hash->destruir_dato){
-            free(hash->tabla[i].clave);
+            if(hash->destruir_dato)
+                hash->destruir_dato(hash->tabla[i].valor);
         }
     }
     free(hash->tabla);
