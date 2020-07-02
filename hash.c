@@ -5,7 +5,8 @@
 #include "hash.h"
 #define TAM_INI 17
 #define POS_INVALIDA -1
-#define FACTOR_DE_CARGA 0.7
+#define FACTOR_DE_CARGA_MAX 0.7
+#define FACTOR_DE_CARGA_MIN 0.4
 
 typedef enum estados_celda {VACIO, OCUPADO, BORRADO} estado_celda_t;
 
@@ -53,7 +54,8 @@ size_t linear_probing(const hash_t *hash, size_t i){
 
 bool necesita_redimension(hash_t* hash){
     size_t factor_de_carga = (hash_cantidad(hash) + hash->cantidad_borrados) / hash->tamanio;
-    if(factor_de_carga > FACTOR_DE_CARGA) return true;
+    if(factor_de_carga > FACTOR_DE_CARGA_MAX) return true;
+    else if(factor_de_carga > 0.3 && factor_de_carga < FACTOR_DE_CARGA_MIN) return true;
     return false;
 }
 
@@ -155,6 +157,9 @@ void *hash_borrar(hash_t *hash, const char *clave){
     hash->tabla[pos].estado = BORRADO;
     hash->cantidad_ocupados--;
     hash->cantidad_borrados++;
+    if(necesita_redimension(hash)){
+        hash_redimension(hash, (hash->tamanio) / 2);
+    }
     return hash->tabla[pos].valor;
 }
 
