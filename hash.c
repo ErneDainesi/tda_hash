@@ -96,13 +96,9 @@ size_t buscar_pos(const hash_t* hash, char* clave, bool* clave_pertenece){
             return i;
         }
         i = linear_probing(hash, i);
-        if (i == pos){
-        	*clave_pertenece = false;
-            break;
-        }
     }
     *clave_pertenece = false;
-    return POS_INVALIDA;
+    return i;
 }
 
 
@@ -140,14 +136,11 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
             hash->destruir_dato(dato_anterior);
         }
         free(copia_clave);
-        hash->cantidad_ocupados++;
         return true;
     }
-    pos = hash_func(copia_clave, strlen(copia_clave)) % hash->tamanio;
-    size_t i = pos;
-    hash->tabla[i].clave = copia_clave;
-    hash->tabla[i].valor = dato;
-    hash->tabla[i].estado = OCUPADO;
+    hash->tabla[pos].clave = copia_clave;
+    hash->tabla[pos].valor = dato;
+    hash->tabla[pos].estado = OCUPADO;
     hash->cantidad_ocupados++;
     return true;
 }
