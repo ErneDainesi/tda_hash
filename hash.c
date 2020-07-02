@@ -57,12 +57,6 @@ bool necesita_redimension(hash_t* hash){
     return false;
 }
 
-bool necesita_achicar(hash_t* hash){
-    size_t factor_de_carga = (hash_cantidad(hash) + hash->cantidad_borrados) / hash->tamanio;
-    if(factor_de_carga < 0.3) return true;
-    return false;
-}
-
 celda_t* celda_crear(size_t tamanio_de_tabla){
     celda_t* celdas = calloc(1, sizeof(celda_t) * tamanio_de_tabla);
     if(!celdas) return NULL;
@@ -157,33 +151,9 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
     hash->tabla[i].estado = OCUPADO;
     hash->cantidad_ocupados++;
     return true;
-    // char* copia_clave = strdup(clave);
-    // if (!copia_clave) return false;
-    // if (necesita_redimension(hash)){
-    //     hash_redimension(hash);
-    // }
-    // size_t pos = buscar_pos(hash, clave);
-    // if(pos != POS_INVALIDA){
-    //     void* dato_anterior = hash->tabla[pos].valor;
-    //     hash->tabla[pos].valor = dato;
-    //     if(hash->destruir_dato){
-    //         hash->destruir_dato(dato_anterior);
-    //     }
-    //     free(copia_clave);
-    //     return true;
-    // }
-    // pos = hash_func(copia_clave, strlen(copia_clave)) % hash->tamanio;
-    // hash->tabla[pos].clave = copia_clave;
-    // hash->tabla[pos].valor = dato;
-    // hash->tabla[pos].estado = OCUPADO;
-    // hash->cantidad_ocupados++;
-    // return true;
 }
 
 void *hash_borrar(hash_t *hash, const char *clave){
-    if (necesita_achicar(hash)){
-        hash_redimension(hash, ((hash->tamanio)/2));
-    }
     size_t pos = buscar_pos(hash, clave);
     if(pos == POS_INVALIDA) return NULL;
     free(hash->tabla[pos].clave);
