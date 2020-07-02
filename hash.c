@@ -6,7 +6,8 @@
 #define TAM_INI 17
 #define POS_INVALIDA -1
 #define FACTOR_DE_CARGA_MAX 0.7
-#define FACTOR_DE_CARGA_MIN 0.4
+#define COTA_MAX_ACHICAR 0.4
+#define COTA_MIN_ACHICAR 0.3
 
 typedef enum estados_celda {VACIO, OCUPADO, BORRADO} estado_celda_t;
 
@@ -52,13 +53,6 @@ size_t linear_probing(const hash_t *hash, size_t i){
     return (i + 1) % hash->tamanio;
 }
 
-bool necesita_redimension(hash_t* hash){
-    size_t factor_de_carga = (hash_cantidad(hash) + hash->cantidad_borrados) / hash->tamanio;
-    if(factor_de_carga > FACTOR_DE_CARGA_MAX) return true;
-    else if(factor_de_carga > 0.3 && factor_de_carga < FACTOR_DE_CARGA_MIN) return true;
-    return false;
-}
-
 celda_t* celda_crear(size_t tamanio_de_tabla){
     celda_t* celdas = calloc(1, sizeof(celda_t) * tamanio_de_tabla);
     if(!celdas) return NULL;
@@ -84,6 +78,16 @@ bool hash_redimension(hash_t* hash, size_t nuevo_tamanio){
     }
     free(tabla_vieja);
     return true;
+}
+
+void necesita_redimension(hash_t* hash){
+    size_t factor_de_carga = (hash_cantidad(hash) + hash->cantidad_borrados) / hash->tamanio;
+    if(factor_de_carga > FACTOR_DE_CARGA_MAX){
+        hash_redimension(hash, (hash->tamanio) * 2);
+    }
+    else if(factor_de_carga > COTA_MIN_ACHICAR && factor_de_carga < COTA_MAX_ACHICAR){
+        hash_redimension(hash, (hash->tamanio) / 2);
+    }
 }
 
 size_t buscar_pos(const hash_t* hash, char* clave, bool* clave_pertenece){
@@ -126,9 +130,7 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
     char* copia_clave = strdup(clave);
     if (!copia_clave) return false;
-    if (necesita_redimension(hash)){
-        hash_redimension(hash, ((hash->tamanio)*2));
-    }
+    necesita_redimension(hash);
     bool clave_pertenece = true;
     size_t pos = buscar_pos(hash, copia_clave, &clave_pertenece);
     if(clave_pertenece){
@@ -157,9 +159,7 @@ void *hash_borrar(hash_t *hash, const char *clave){
     hash->tabla[pos].estado = BORRADO;
     hash->cantidad_ocupados--;
     hash->cantidad_borrados++;
-    if(necesita_redimension(hash)){
-        hash_redimension(hash, (hash->tamanio) / 2);
-    }
+    necesita_redimension(hash);
     return hash->tabla[pos].valor;
 }
 
