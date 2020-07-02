@@ -84,14 +84,12 @@ bool hash_redimension(hash_t* hash, size_t nuevo_tamanio){
     return true;
 }
 
-size_t buscar_pos(const hash_t* hash, const char* clave){
-    char* copia_clave = strdup(clave);
-    if (!copia_clave) return POS_INVALIDA;
-    size_t pos = hash_func(copia_clave, strlen(copia_clave)) % hash->tamanio;
+size_t buscar_pos(const hash_t* hash, char* clave){
+    if (!clave) return POS_INVALIDA;
+    size_t pos = hash_func(clave, strlen(clave)) % hash->tamanio;
     size_t i = pos;
     while(hash->tabla[i].estado != VACIO){
-        if (hash->tabla[i].estado == OCUPADO  &&  strcmp(hash->tabla[i].clave, copia_clave) == 0){
-            free(copia_clave);
+        if (hash->tabla[i].estado == OCUPADO  &&  strcmp(hash->tabla[i].clave, clave) == 0){
             return i;
         }
         i = linear_probing(hash, i);
@@ -99,7 +97,6 @@ size_t buscar_pos(const hash_t* hash, const char* clave){
             break;
         }
     }
-    free(copia_clave);
     return POS_INVALIDA;
 }
 
@@ -154,23 +151,29 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 }
 
 void *hash_borrar(hash_t *hash, const char *clave){
-    size_t pos = buscar_pos(hash, clave);
+    char* copia_clave = strdup(clave);
+    size_t pos = buscar_pos(hash, copia_clave);
     if(pos == POS_INVALIDA) return NULL;
     free(hash->tabla[pos].clave);
     hash->tabla[pos].estado = BORRADO;
     hash->cantidad_ocupados--;
     hash->cantidad_borrados++;
+    free(copia_clave);
     return hash->tabla[pos].valor;
 }
 
 void *hash_obtener(const hash_t *hash, const char *clave){
-    size_t pos = buscar_pos(hash, clave);
+    char* copia_clave = strdup(clave);
+    size_t pos = buscar_pos(hash, copia_clave);
     if(pos == POS_INVALIDA) return NULL;
+    free(copia_clave);
     return hash->tabla[pos].valor;
 }
 
 bool hash_pertenece(const hash_t *hash, const char *clave){
-    size_t pos = buscar_pos(hash, clave);
+    char* copia_clave = strdup(clave);
+    size_t pos = buscar_pos(hash, copia_clave);
+    free(copia_clave);
     return pos != POS_INVALIDA;
 }
 
