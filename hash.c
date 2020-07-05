@@ -80,14 +80,16 @@ bool hash_redimension(hash_t* hash, size_t nuevo_tamanio){
     return true;
 }
 
-void necesita_redimension(hash_t* hash){
+bool redimensionar_si_hace_falta(hash_t* hash){
+    bool redimension = true;
     size_t factor_de_carga = (hash_cantidad(hash) + hash->cantidad_borrados) / hash->tamanio;
     if(factor_de_carga > FACTOR_DE_CARGA_MAX){
-        hash_redimension(hash, (hash->tamanio) * 2);
+        redimension = hash_redimension(hash, (hash->tamanio) * 2);
     }
     else if(factor_de_carga > COTA_MIN_ACHICAR && factor_de_carga < COTA_MAX_ACHICAR){
-        hash_redimension(hash, (hash->tamanio) / 2);
+        redimension = hash_redimension(hash, (hash->tamanio) / 2);
     }
+    return redimension;
 }
 
 size_t buscar_pos(const hash_t* hash, char* clave, bool* clave_pertenece){
@@ -130,7 +132,8 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
     char* copia_clave = strdup(clave);
     if (!copia_clave) return false;
-    necesita_redimension(hash);
+    bool redimension = redimensionar_si_hace_falta(hash);
+    if (!redimension) return false;
     bool clave_pertenece = true;
     size_t pos = buscar_pos(hash, copia_clave, &clave_pertenece);
     if(clave_pertenece){
@@ -159,7 +162,7 @@ void *hash_borrar(hash_t *hash, const char *clave){
     hash->tabla[pos].estado = BORRADO;
     hash->cantidad_ocupados--;
     hash->cantidad_borrados++;
-    necesita_redimension(hash);
+    redimensionar_si_hace_falta(hash);
     return hash->tabla[pos].valor;
 }
 
